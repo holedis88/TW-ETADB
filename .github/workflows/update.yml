@@ -1,0 +1,38 @@
+name: Daily Data Update
+
+on:
+  schedule:
+    # 매일 한국 시간 새벽 4시에 실행 (UTC 기준 19:00)
+    - cron: '0 02 * * *'
+  workflow_dispatch: # 수동으로 실행 버튼을 만들고 싶을 때 사용
+
+jobs:
+  build_and_run:
+    runs-on: windows-latest # 윈도우 환경에서 실행
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '10.0.x' # 본인의 .NET 버전과 맞추세요
+
+    - name: Install Playwright Browsers
+      run: |
+        dotnet build
+        pwsh TWETA/bin/Debug/net10.0/playwright.ps1 install --with-deps
+
+    - name: Run Scraper
+      run: dotnet run --project TWETA/TWETA.csproj
+
+    - name: Commit and Push changes
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git add *.json
+        git commit -m "Auto-update data: ${env:CURRENT_DATE}" || exit 0
+        git push
+      env:
+        CURRENT_DATE: ${{ github.event.repository.updated_at }}
