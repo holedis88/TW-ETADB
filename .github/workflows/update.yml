@@ -1,0 +1,35 @@
+name: Daily Data Update
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  build_and_run:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4 # v4로 업데이트
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4 # v4로 업데이트
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Install Playwright Browsers
+      run: |
+        dotnet build
+        npx playwright install chromium --with-deps
+
+    - name: Run Scraper
+      # 빌드 실패 원인을 보기 위해 run 단계를 명확히 합니다
+      run: dotnet run --project TWETA/TWETA.csproj
+
+    - name: Commit and Push changes
+      # 이전 대화에서 파일이 생성되어도 커밋이 안 되었던 문제를 해결하기 위한 설정
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git add **/eta_ranking.json
+        git diff --quiet && git diff --staged --quiet || git commit -m "Auto-update: $(date +'%Y-%m-%d')"
+        git push
