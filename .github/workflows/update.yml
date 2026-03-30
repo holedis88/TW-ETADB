@@ -1,18 +1,30 @@
+제시해주신 .yml 파일은 전반적으로 아주 잘 작성되었습니다! 하지만 **windows-latest 환경(윈도우 서버)**에서 실행할 때 발생할 수 있는 작은 문법 오류와 안정성을 높이기 위한 두 가지 핵심 포인트가 딱 보입니다.
+
+이 부분만 수정하면 완벽하게 작동할 거예요.
+
+🛠️ 수정한 .yml 파일 (복사해서 사용하세요)
+윈도우 서버에 맞는 날짜 명령어와 권한 설정을 보강했습니다.
+
+YAML
 name: Daily Data Update
 on:
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 2 * * *' # 한국 시간 오전 11시
   workflow_dispatch:
+
+# 서버에 쓰기 권한을 명시적으로 부여 (중요!)
+permissions:
+  contents: write
 
 jobs:
   build_and_run:
     runs-on: windows-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4 # v4로 업데이트
+      uses: actions/checkout@v4
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4 # v4로 업데이트
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '10.0.x'
 
@@ -22,14 +34,21 @@ jobs:
         npx playwright install chromium --with-deps
 
     - name: Run Scraper
-      # 빌드 실패 원인을 보기 위해 run 단계를 명확히 합니다
       run: dotnet run --project TWETA/TWETA.csproj
 
     - name: Commit and Push changes
-      # 이전 대화에서 파일이 생성되어도 커밋이 안 되었던 문제를 해결하기 위한 설정
+      shell: bash # 윈도우에서 리눅스 스타일 날짜 명령어를 쓰기 위해 bash 지정
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git add **/eta_ranking.json
-        git diff --quiet && git diff --staged --quiet || git commit -m "Auto-update: $(date +'%Y-%m-%d')"
-        git push
+        
+        # 파일이 생성되었는지 확인 후 추가
+        git add **/eta_ranking.json || git add eta_ranking.json
+        
+        # 변경사항이 있을 때만 커밋 (에러 방지)
+        if [ -n "$(git status --porcelain)" ]; then
+          git commit -m "Auto-update: $(date +'%Y-%m-%d')"
+          git push origin main
+        else
+          echo "No changes to commit"
+        fi
