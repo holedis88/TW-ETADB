@@ -24,10 +24,9 @@ jobs:
       run: dotnet build TWETA/TWETA.csproj
 
     - name: Install Playwright Browsers
-      run: |
-        dotnet tool install --global Microsoft.Playwright.CLI
-        # -p 옵션으로 프로젝트 경로를 명확하게 지정합니다.
-        playwright install chromium --with-deps -p TWETA/TWETA.csproj
+      # 프로젝트를 직접 실행하여 내부에 포함된 Playwright 엔진을 통해 브라우저를 설치합니다.
+      # 이 방식은 별도의 CLI 도구 설치 없이 버전과 경로를 완벽히 맞출 수 있습니다.
+      run: dotnet run --project TWETA/TWETA.csproj -- playwright install chromium --with-deps
 
     - name: Run Scraper
       run: dotnet run --project TWETA/TWETA.csproj
