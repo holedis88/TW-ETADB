@@ -4,7 +4,7 @@ on:
     - cron: '0 2 * * *' # 한국 시간 오전 11시
   workflow_dispatch:
 
-# 서버에 쓰기 권한을 명시적으로 부여 (중요!)
+# 서버에 쓰기 권한 부여
 permissions:
   contents: write
 
@@ -18,26 +18,29 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '10.0.x'
+        dotnet-version: '10.0.x' # 사용 중인 .NET 10 버전 유지
+
+    - name: Build Project
+      run: dotnet build TWETA/TWETA.csproj
 
     - name: Install Playwright Browsers
+      # .NET 전용 Playwright CLI를 사용하여 정확한 버전을 설치합니다.
       run: |
-        dotnet build
-        npx playwright install chromium --with-deps
+        dotnet tool install --global Microsoft.Playwright.CLI
+        playwright install chromium --with-deps
 
     - name: Run Scraper
       run: dotnet run --project TWETA/TWETA.csproj
 
     - name: Commit and Push changes
-      shell: bash # 윈도우에서 리눅스 스타일 날짜 명령어를 쓰기 위해 bash 지정
+      shell: bash
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         
-        # 파일이 생성되었는지 확인 후 추가
-        git add **/eta_ranking.json || git add eta_ranking.json
+        # 파일 확인 및 추가 (경로에 맞게 조정 가능)
+        git add **/eta_ranking.json || git add eta_ranking.json || true
         
-        # 변경사항이 있을 때만 커밋 (에러 방지)
         if [ -n "$(git status --porcelain)" ]; then
           git commit -m "Auto-update: $(date +'%Y-%m-%d')"
           git push origin main
