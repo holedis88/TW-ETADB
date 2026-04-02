@@ -24,13 +24,20 @@ jobs:
       run: dotnet build TWETA/TWETA.csproj
 
     - name: Install Playwright Browsers
-      # 프로젝트를 직접 실행하여 내부에 포함된 Playwright 엔진을 통해 브라우저를 설치합니다.
-      # 이 방식은 별도의 CLI 도구 설치 없이 버전과 경로를 완벽히 맞출 수 있습니다.
-      run: dotnet run --project TWETA/TWETA.csproj -- playwright install chromium --with-deps
+      shell: pwsh
+      run: |
+        # TWETA/bin 폴더 내에서 playwright.ps1 파일을 찾아 실행합니다.
+        $script = Get-ChildItem -Path "TWETA/bin" -Filter "playwright.ps1" -Recurse | Select-Object -First 1
+        if ($script) {
+            Write-Host "Found script at: $($script.FullName)"
+            & $script.FullName install chromium
+        } else {
+            Write-Error "playwright.ps1 파일을 찾을 수 없습니다. 빌드가 성공했는지 확인하세요."
+            exit 1
+        }
 
     - name: Run Scraper
       run: dotnet run --project TWETA/TWETA.csproj
-
     - name: Commit and Push changes
       shell: bash
       run: |
